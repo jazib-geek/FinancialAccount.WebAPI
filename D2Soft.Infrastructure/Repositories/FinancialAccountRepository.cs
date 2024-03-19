@@ -13,16 +13,19 @@ namespace D2Soft.Infrastructure.Repositories
     public class FinancialAccountRepository : IFinancialAccountRepository
     {
         private readonly AppDbContext _context;
+        private readonly IUnitOfWork _unitOfWork;
 
-        public FinancialAccountRepository(AppDbContext context)
+        public FinancialAccountRepository(AppDbContext context, IUnitOfWork unitOfWork)
         {
             _context = context;
+            _unitOfWork = unitOfWork;
         }
 
         public async Task<FinancialAccount> AddFinancialAccount(FinancialAccount toCreate)
         {
             _context.FinancialAccounts.Add(toCreate);
-            await _context.SaveChangesAsync();
+            await _unitOfWork.CommitAsync();
+            // await _context.SaveChangesAsync();
 
             return toCreate;
         }
@@ -36,8 +39,8 @@ namespace D2Soft.Infrastructure.Repositories
 
             _context.FinancialAccounts.Remove(account);
 
-            await _context.SaveChangesAsync();
-             
+            // await _context.SaveChangesAsync();
+            await _unitOfWork.CommitAsync();
         }
 
         public async Task<List<FinancialAccount>> GetAll()
@@ -59,7 +62,8 @@ namespace D2Soft.Infrastructure.Repositories
             financialAccount.AccountType = toUpdate.AccountType;
             financialAccount.Balance = toUpdate.Balance;
 
-            await _context.SaveChangesAsync();
+            //await _context.SaveChangesAsync();
+            await _unitOfWork.CommitAsync();
 
             return financialAccount;
         }

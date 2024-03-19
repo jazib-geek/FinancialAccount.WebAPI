@@ -6,6 +6,7 @@ using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using D2Soft.Application.FinancialAccounts.Validators;
+using D2Soft.Infrastructure.Repositories;
 
 namespace D2Soft.WebAPI.Controllers
 {
@@ -16,12 +17,14 @@ namespace D2Soft.WebAPI.Controllers
         private readonly IMediator _mediator;
         private readonly IFinancialAccountRepository _financialAccountRepository;
         private readonly ILogger<FinancialAccountController> _logger;
+        private readonly IUnitOfWork _unitOfWork;
 
-        public FinancialAccountController(IMediator mediator, ILogger<FinancialAccountController> logger, IFinancialAccountRepository financialAccountRepository)
+        public FinancialAccountController(IMediator mediator, ILogger<FinancialAccountController> logger, IFinancialAccountRepository financialAccountRepository, IUnitOfWork unitOfWork)
         {
             _mediator = mediator;
             _logger = logger;
             _financialAccountRepository = financialAccountRepository;
+            _unitOfWork = unitOfWork;
         }
 
         [HttpGet]
@@ -41,25 +44,46 @@ namespace D2Soft.WebAPI.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateFinancialAccount([FromBody] CreateFinancialAccount command)
+        public async Task<IActionResult> CreateFinancialAccount([FromBody] CreateFinancialAccount model)
         {
             try
             {
-                // Validate input model
-                var validationResult = await new CreateFinancialAccountValidator().ValidateAsync(command);
+                var validationResult = await new CreateFinancialAccountValidator().ValidateAsync(model);
                 if (!validationResult.IsValid)
                 {
                     return BadRequest(validationResult.Errors.Select(error => error.ErrorMessage));
                 }
 
+                // Map to command
+                var command = new CreateFinancialAccount
+                {
+                    AccountNumber = model.AccountNumber,
+                    AccountType = model.AccountType,
+                    Balance = model.Balance,
+                    OwnerId = model.OwnerId
+                 };
+
+                // Send request via Mediator
                 var createdAccount = await _mediator.Send(command);
-                return CreatedAtAction(nameof(GetFinancialAccountById), new { id = createdAccount.Id }, createdAccount);
+
+                await _unitOfWork.CommitAsync();
+
+                return Ok(createdAccount);
             }
             catch (Exception ex)
             {
-                return StatusCode(500, $"An error occurred while creating the financial account: {ex.Message}");
+                // Rollback changes on error
+                _unitOfWork.Rollback();
+
+                // Log error
+                _logger.LogError(ex, "An error occurred while creating a financial account.");
+
+                // Return error response
+                return StatusCode(500, "An error occurred while processing your request.");
             }
         }
+
+
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetFinancialAccountById(int id)
@@ -119,14 +143,16 @@ namespace D2Soft.WebAPI.Controllers
         {
             try
             {
-                if (id != command.FinancialAccountId)
-                {
-                    return BadRequest("Invalid financial account ID.");
-                }
-
+                command.FinancialAccountId = id;
                 var result = await _mediator.Send(command);
 
-                return Ok(result);
+                if (!result.Item1)
+                {
+                    return BadRequest(result.Item2);
+                }
+
+
+                return Ok(result.Item2);
             }
             catch (Exception ex)
             {

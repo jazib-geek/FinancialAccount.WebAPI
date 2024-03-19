@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace D2Soft.Application.FinancialAccounts.Commands
 {
-    public class UpdateFinancialAccount : IRequest<string>
+    public class UpdateFinancialAccount : IRequest<(bool, string)>
     {
         public int FinancialAccountId { get; set; }
         public string UpdatedAccountNumber { get; set; }

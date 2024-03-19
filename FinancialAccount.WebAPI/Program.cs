@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MediatR;
 using System.Reflection;
 using FluentValidation.AspNetCore;
+using Microsoft.Extensions.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -30,6 +31,7 @@ builder.Services
 
 // Repos
 builder.Services.AddScoped<IFinancialAccountRepository, FinancialAccountRepository>();
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 //builder.Services.AddMediatR(typeof(GetFinancialAccountById));
 

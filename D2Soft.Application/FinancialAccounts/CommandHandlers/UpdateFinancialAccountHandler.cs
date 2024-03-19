@@ -3,13 +3,14 @@ using D2Soft.Application.FinancialAccounts.Commands;
 using MediatR;
 using System;
 using System.Collections.Generic;
+using System.Data.SqlTypes;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace D2Soft.Application.FinancialAccounts.CommandHandlers
 {
-    public class UpdateFinancialAccountHandler : IRequestHandler<UpdateFinancialAccount, string>
+    public class UpdateFinancialAccountHandler : IRequestHandler<UpdateFinancialAccount, (bool, string)>
     {
         private readonly IFinancialAccountRepository _financialAccountRepository;
 
@@ -18,7 +19,7 @@ namespace D2Soft.Application.FinancialAccounts.CommandHandlers
             _financialAccountRepository = financialAccountRepository;
         }
 
-        public async Task<string> Handle(UpdateFinancialAccount request, CancellationToken cancellationToken)
+        public async Task<(bool, string)> Handle(UpdateFinancialAccount request, CancellationToken cancellationToken)
         {
             try
             {
@@ -26,7 +27,7 @@ namespace D2Soft.Application.FinancialAccounts.CommandHandlers
 
                 if (financialAccount == null)
                 {
-                    return "Financial account not found.";
+                    return (false, "Financial account not found.");
                 }
 
                 financialAccount.Id = request.FinancialAccountId;
@@ -36,11 +37,11 @@ namespace D2Soft.Application.FinancialAccounts.CommandHandlers
 
                 await _financialAccountRepository.UpdateFinancialAccount(financialAccount);
 
-                return "Financial account updated successfully.";
+                return (true, "Financial account updated successfully.");
             }
             catch (Exception ex)
             {
-                return $"Failed to update financial account: {ex.Message}";
+                return (false, $"Failed to update financial account: {ex.Message}");
             }
         }
     }
